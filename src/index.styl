@@ -1,0 +1,30 @@
+.grid
+  display: grid
+  grid-template-columns: repeat(auto-fill, 10em)
+  gap: .25em
+  .head, .body
+    display: grid
+    grid-template-columns: subgrid
+  .cell
+    border-radius: .25em
+    padding: .25em
+    text-align: center
+  .head
+    position: sticky
+    top: 0
+  .head .cell
+    border: 0
+
+  .check
+    cursor: pointer
+    color: #d1d2d3
+    border-radius: .25em
+    border: 1px solid transparent
+    padding: .25em 1em
+    width: fit-content
+    margin: auto
+  .check:hover
+    background: rgba(255,255,0,.25)
+  .check.active
+    color: rgb(0,192,0)
+    border-color: rgb(0,192,0)

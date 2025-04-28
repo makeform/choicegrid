@@ -1,0 +1,20 @@
+div
+  style(type="text/css"): include:stylus index.styl
+  script(type="@plotdb/block"): include:lsc index.ls
+  div(plug="body")
+    .m-edit.has-tips.manual(ld="error-root")
+      .grid(ld="grid")
+        .head(ld="head")
+          div
+          .cell(ld-each="option"): div(ld="label")
+        .body(ld-each="entry")
+          div(ld="label")
+          .cell(ld-each="option"): .check(ld="check"): i.i-check
+
+      //-div(ld="input-group")
+        select.form-control(ld="input")
+          option(value="") ...
+          option(ld-each="option") ...
+        input.form-control.d-none(ld="other-text",t,t-placeholder="fill-other")
+      //.m-edit: .hover-tip.tip-sm: div(ld-each="error")
+    //.m-view: div(ld="content")
