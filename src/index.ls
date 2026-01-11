@@ -57,8 +57,8 @@ mod = ({root, ctx, data, pubsub, parent, t, i18n}) ->
     inside = (v) ~> v in (lc.values or []).map(-> getv it)
     _render-option = debounce 100, ~> if @mod.child.option-view => @mod.child.option-view.render!
     remeta = ~>
-      cfg = @mod.info.config or {}
-      lc.meta = @mod.info.meta
+      lc.meta = hitf!get! or {}
+      cfg = lc.meta.config or {}
       lc.cfg = cfg
       lc.values = cfg.values or []
       lc.entries = cfg.entries or []
@@ -145,7 +145,7 @@ mod = ({root, ctx, data, pubsub, parent, t, i18n}) ->
                 cfg = hitf!get!{}config
                 cfg.values = cfg.[]values.filter -> getv(it) != getv(ctx)
                 hitf!set!
-                views.0.render!
+                remeta!
               label: hitf!edit {obj: ({ctx}) -> ctx.{}label}
             handler:
               label: hitf!render obj: ({ctx}) -> ctx.label or ctx
@@ -164,6 +164,7 @@ mod = ({root, ctx, data, pubsub, parent, t, i18n}) ->
                 cfg = hitf!get!{}config
                 cfg.entries = cfg.[]entries.filter -> getv(it) != getv(ctx)
                 hitf!set!
+                remeta!
                 views.0.render!
               label: hitf!edit {obj: ({ctx}) -> ctx.{}label}
             handler:
