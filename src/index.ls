@@ -3,43 +3,63 @@ module.exports =
     name: "@makeform/choicegrid", extend: name: '@makeform/common'
     i18n:
       en:
+        "new entry": "New Entry"
+        "new option": "New Option"
         "empty": "(empty)"
-        "other": "Other"
-        "fill-other": "Please fill"
+        config:
+          values: name: 'Options', desc: "List of column options for the grid"
+          entries: name: 'Entries', desc: "List of row entries for the grid"
+          sep: name: 'Separator', desc: "Separator for displaying multiple selected values"
       "zh-TW":
+        "new entry": "新題目"
+        "new option": "新選項"
         "empty": "(未填寫)"
-        "other": "其它"
-        "fill-other": "請填寫"
-  init: (opt) -> opt.pubsub.fire \subinit, mod: mod(opt)
+        config:
+          values: name: '選項', desc: "網格的欄位選項列表"
+          entries: name: '條目', desc: "網格的列條目列表"
+          sep: name: '分隔符號', desc: "顯示多個選中值時的分隔符號"
+  init: (opt) ->
+    opt.pubsub.on \inited, (o = {}) ~> @ <<< o
+    opt.pubsub.fire \subinit, mod: mod.call @, opt
 mod = ({root, ctx, data, pubsub, parent, t, i18n}) ->
   {ldview} = ctx
   lc = {}
-  pubsub.on \init.choice, (o) -> lc.defcfg = o
+  hitf = ~> @hitf
+  keygen = -> "_#{Date.now!}#{Math.random!toString(36)substring(2)}"
+  @client = ->
+    minibar: []
+    meta: config:
+      values: type: \list, name: \config.values.name, desc: \config.values.desc
+      entries: type: \list, name: \config.entries.name, desc: \config.entries.desc
+      sep: type: \text, name: \config.sep.name, desc: \config.sep.desc
+    render: ~> lc.view.render!
+    sample: ~>
+      config:
+        values: [
+          * key: keygen!, label: hitf!wrap "#{i18n.language}": 'Option 1'
+          * key: keygen!, label: hitf!wrap "#{i18n.language}": 'Option 2'
+          * key: keygen!, label: hitf!wrap "#{i18n.language}": 'Option 3'
+        ]
+        entries: [
+          * key: keygen!, label: hitf!wrap "#{i18n.language}": 'Entry 1'
+          * key: keygen!, label: hitf!wrap "#{i18n.language}": 'Entry 2'
+          * key: keygen!, label: hitf!wrap "#{i18n.language}": 'Entry 3'
+        ]
   init: ->
     i18n.on \languageChanged, ~> _render-option!
-    getv = (t) -> if typeof(t) == \object => t.value else t
+    getv = (t) ->
+      if typeof(t) == \string => t
+      else (t?key or t?value or hitf!totext(t?label))
     # return value as a list regardless of original type
-    # ( doesn't include other.text )
     normv = ({entry}) ->
       list = ((lc.value or {})[entry] or {}).list or []
       list.filter(->it)
-    getlabel = (s) ->
-      if s == \__other__ => t(\other)
-      else if typeof(s) == \object => t(s.label) else t(s)
-    tolabel = (s) ->
-      r = (lc.values).filter(-> getv(it) == s).0
-      r = if r and r.label => r.label else r
-      return if r => t(r) else if typeof(s) == \string => t(s) else s
     inside = (v) ~> v in (lc.values or []).map(-> getv it)
     _render-option = debounce 100, ~> if @mod.child.option-view => @mod.child.option-view.render!
     remeta = ~>
-      if !lc.defcfg => cfg = @mod.info.config or {}
-      else
-        cfg = {} <<< (lc.defcfg.config or {})
-        for k,v of @mod.info.config => if !cfg[k]? => cfg[k] = v
+      cfg = @mod.info.config or {}
       lc.meta = @mod.info.meta
       lc.cfg = cfg
-      lc.other = cfg.{}other
       lc.values = cfg.values or []
       lc.entries = cfg.entries or []
       if @mod.child.view => @mod.child.view.render!
@@ -49,46 +69,109 @@ mod = ({root, ctx, data, pubsub, parent, t, i18n}) ->
     @on \change, (v) ~>
       lc.value = (v or {})
       for k,v of lc.value => v.list = v.[]list.filter -> inside(it)
-      @mod.child.view.render <[content]>
+      @mod.child.view.render <[content entry]>
       _render-option!
     handler = ({entry, value}) ~>
       lc.{}value{}[entry].list = [value]
+      lc.value.raw = value-to-text!
       @value lc.value
 
-    @mod.child.view = view = new ldview do
+    option-to-label = (o) ->
+      vals = hitf!get!?config?values or []
+      o = getv o
+      v = vals.filter((v) -> getv(v) == o).0
+      hitf!totext(if typeof(v) == \string => v else v?value or v?label)
+    ent-to-label = (e) ->
+      vals = hitf!get!?config?entries or []
+      e = getv e
+      v = vals.filter((v) -> getv(v) == e).0
+      hitf!totext(if typeof(v) == \string => v else v?value or v?label)
+    value-to-text = ->
+      (hitf!get!?config?entries or [])
+        .map (ent) ->
+          key = ent-to-label ent
+          val = (lc.value?[getv ent]?list or [])
+            .map (v) -> option-to-label v
+            .join(lc.cfg.sep)
+          "#key: #val"
+        .join \\n
+
+    @mod.child.view = view = lc.view = new ldview do
       root: root
       text: content: ({node}) ~>
         if @is-empty! => return t(\empty)
         ret = @value!
-        other = (ret or {}).other
-        ret = if typeof(ret) == \string => [ret] else (ret.list or [])
-        other-text = ''
-        if ('__other__' in ret) and lc.other.enabled =>
-          other-text = t("other")
-          if lc.other.editable and (other or {}).text =>
-            other-text += (":" + other.text)
-        ret = ret
-          .filter (v) -> v != \__other__
-          .map (v) -> tolabel(v)
-        if lc.other.enabled and other-text => ret.push other-text
-        ret = ret.join(if lc.cfg.sep => that else ', ')
+        ret = value-to-text!
         if !ret => ret = t("empty")
-        return ret
+        ret
+      action:
+        click:
+          "add-option": ({node, views}) ~>
+            new-option =
+              key: keygen!
+              label: hitf!wrap "#{i18n.language}": "untitled"
+            hitf!get!{}config[]values.push new-option
+            hitf!set!
+            views.0.render!
+          "add-entry": ({node, views}) ~>
+            new-entry =
+              key: keygen!
+              label: hitf!wrap "#{i18n.language}": "untitled"
+            hitf!get!{}config[]entries.push new-entry
+            hitf!set!
+            views.0.render!
       handler:
-        head: ({node}) -> node.style.gridColumn = "span #{lc.values.length + 1}"
+        grid: ({node}) ->
+          v = hitf!get!config?values or []
+          v = if Array.isArray(v) => v else if v => [v] else []
+          cols = v.length + 1
+          node.style.gridTemplateColumns = "repeat(#{cols}, minmax(8em, 1fr))"
+        head: ({node}) ->
+          v = hitf!get!config?values or []
+          v = if Array.isArray(v) => v else if v => [v] else []
+          node.style.gridColumn = "span #{v.length + 1}"
         option:
-          list: -> lc.values
+          list: ~>
+            v = hitf!get!config?values or []
+            if Array.isArray(v) => v else if v => [v] else []
           key: -> getv(it)
           view:
+            action: click:
+              "@": ({node, evt}) ->
+                if !(node.parentNode and (n = ld$.find(node.parentNode,'[ld=editor]',0))) => return
+                evt.stopPropagation!
+                evt.preventDefault!
+              "remove-option": ({node, ctx, views}) ~>
+                cfg = hitf!get!{}config
+                cfg.values = cfg.[]values.filter -> getv(it) != getv(ctx)
+                hitf!set!
+                views.0.render!
+              label: hitf!edit {obj: ({ctx}) -> ctx.{}label}
             handler:
-              label: ({node, ctx}) -> node.textContent = getlabel(ctx)
+              label: hitf!render obj: ({ctx}) -> ctx.label or ctx
         entry:
-          list: -> lc.entries
+          list: ~>
+            v = hitf!get!config?entries or []
+            if Array.isArray(v) => v else if v => [v] else []
           key: -> getv(it)
           view:
+            action: click:
+              "@": ({node, evt}) ->
+                if !(node.parentNode and (n = ld$.find(node.parentNode,'[ld=editor]',0))) => return
+                evt.stopPropagation!
+                evt.preventDefault!
+              "remove-entry": ({node, ctx, views}) ~>
+                cfg = hitf!get!{}config
+                cfg.entries = cfg.[]entries.filter -> getv(it) != getv(ctx)
+                hitf!set!
+                views.0.render!
+              label: hitf!edit {obj: ({ctx}) -> ctx.{}label}
             handler:
-              "@": ({node}) -> node.style.gridColumn = "span #{lc.values.length + 1}"
-              label: ({node, ctx}) -> node.textContent = getlabel(ctx)
+              "@": ({node}) ->
+                v = hitf!get!config?values or []
+                v = if Array.isArray(v) => v else if v => [v] else []
+                node.style.gridColumn = "span #{v.length + 1}"
+              label: hitf!render obj: ({ctx}) -> ctx.label or ctx
               option:
                 list: ~> lc.values
                 key: -> getv(it)
@@ -98,18 +181,4 @@ mod = ({root, ctx, data, pubsub, parent, t, i18n}) ->
                   handler:
                     "check": ({node, ctx, ctxs}) ->
                       node.classList.toggle \active, (getv(ctx) in normv({entry: getv(ctxs.0)}))
-
-        input: ({node}) ~>
-          #vals = normv!
-          #for n in (node.options or []) => n.selected = n.value in vals
-          #node.classList.toggle \is-invalid, @status! == 2
-
   render: -> @mod.child.view.render!
-  validate: ->
-    Promise.resolve!then ~>
-      if !((@mod.info.config or {}).other or {}).require-on-check => return
-      v = @value!
-      if v and (v.other or {}).enabled and !(v.other or {}).text =>
-        return ["other-error"]
-      return
-
