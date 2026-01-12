@@ -1,5 +1,10 @@
 # Change Logs
 
+## v0.1.2
+
+ - use cps-hover-host and cps-hover-reveal to replace cps-hover class
+
+
 ## v0.1.1
 
  - tweak option text layout

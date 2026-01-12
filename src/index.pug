@@ -6,15 +6,15 @@ div
       .grid(ld="grid")
         .head(ld="head")
           .cell
-          .cell(ld-each="option")
+          .cell.cps-hover-host(ld-each="option")
             .option-wrap
               .clickable(ld="label")
-              i.i-close.text-sm.ml-1.cps-hover.cps-remove(ld="remove-option")
-        .body(ld-each="entry")
+              i.i-close.text-sm.ml-1.cps-hover-reveal.cps-remove(ld="remove-option")
+        .body.cps-hover-host(ld-each="entry")
           .cell.entry-header
             .entry-wrap
               .flex-grow-1.clickable(ld="label")
-              i.i-close.text-sm.ml-1.cps-hover.cps-remove(ld="remove-entry")
+              i.i-close.text-sm.ml-1.cps-hover-reveal.cps-remove(ld="remove-entry")
           .cell(ld-each="option"): .check(ld="check"): i.i-check
       .cps-ctrl: .mt-2.d-flex.g-2
         .clickable.rounded-sm.bg-dark.cps-add.px-2.py-1(
