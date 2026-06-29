@@ -146,7 +146,7 @@ mod = ({root, ctx, data, pubsub, parent, t, i18n}) ->
                 cfg.values = cfg.[]values.filter -> getv(it) != getv(ctx)
                 hitf!set!
                 remeta!
-              label: hitf!edit {obj: ({ctx}) -> ctx.{}label}
+              label: hitf!edit path: \label, from-ctx: true
             handler:
               label: hitf!render obj: ({ctx}) -> ctx.label or ctx
         entry:
@@ -166,7 +166,7 @@ mod = ({root, ctx, data, pubsub, parent, t, i18n}) ->
                 hitf!set!
                 remeta!
                 views.0.render!
-              label: hitf!edit {obj: ({ctx}) -> ctx.{}label}
+              label: hitf!edit path: \label, from-ctx: true
             handler:
               "@": ({node}) ->
                 v = hitf!get!config?values or []
